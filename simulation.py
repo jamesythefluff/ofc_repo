@@ -2,17 +2,25 @@ import numpy as np
 import matplotlib.pyplot as plt
 from model import Parameters
 from model import drive
-from model import relax_stack
+from model import avalanche
 
 
-def run_simulation(params = Parameters()):
+def initialise(params):
+    L = params.L
+    F = np.zeros((L+2,L+2)) # Padded grid to avoid boundary checks
+    F[1:-1, 1:-1] = np.random.rand(L, L)
+    return F
+
+
+def run_simulation(params, vis=None):
 
     iterations = params.iterations
     begin_data = params.begin_data
     L = params.L
     Fth = params.Fth
 
-    F = np.random.rand(L+1,L+1) 
+    F = np.zeros((L+2,L+2)) # Padded grid to avoid boundary checks
+    F[1:-1, 1:-1] = np.random.rand(L, L)
 
     sizes = [] 
     domains = [] 
@@ -23,54 +31,29 @@ def run_simulation(params = Parameters()):
     iteration_counter = 0
     loop_10_counter = 0
 
-    # Visulatisation
-    plt.ion()  # interactive mode
-    fig, ax = plt.subplots()
-    im = ax.imshow(F, cmap='gray', origin='lower', vmin=0, vmax=1)
-    plt.colorbar(im, label='Force')
-    ax.set_xlabel('x')
-    ax.set_ylabel('y')
-    plt.show()
-
     for n in range(iterations):
 
-        stack = set()  
-        domain = set()
-        quake_size = 0
-
-        drive(F, stack)
-
-        while len(stack) > 0:
-
-            quake_size += len(stack)
-            
-            for coord in stack:
-                domain.add(tuple(coord)) # Update quake domain
-
-            F, stack = relax_stack(F, stack)
-            
-            # Update visualizer
-            im.set_data(F)
-            fig.canvas.draw()
-            fig.canvas.flush_events()
+        F, initial_site = drive(F, params)
+        F, avalanche_size, domain = avalanche(F, initial_site, params, vis)
             
         # Calculation of R value for entire lattice - expect plateau when steady state reached
         if loop_10_counter == 10: # Only calculate R value every 10 iterations to save time
+
             loop_10_counter = 0
-            R = [0,0]
-            for row in F:
-                for F_ij in row:
-                    r_ij = [np.cos(2*np.pi*F_ij), np.sin(2*np.pi*F_ij)]
-                    R[0] += r_ij[0]
-                    R[1] += r_ij[1]
-            R_mod = np.sqrt(R[0]**2 + R[1]**2)
+
+            interior = F[1:-1, 1:-1]
+
+            R_x = np.sum(np.cos(2*np.pi*interior))
+            R_y = np.sum(np.sin(2*np.pi*interior))
+
+            R_mod = np.sqrt(R_x**2 + R_y**2)
             R_arr.append(R_mod)
 
             print(f"progress {iteration_counter/iterations*100:.3f} %") # Progress update
         
         if iteration_counter > begin_data: # Only take data once steady-state is reached
             
-            sizes.append(quake_size)
+            sizes.append(avalanche_size)
 
             if len(domain) > 200: # Only look at reasonably sized domains
                 domains.append(domain)
@@ -87,9 +70,9 @@ def run_simulation(params = Parameters()):
                     r[1] += r_ij[1]
                     
                 r_ref = [0,0]
-                rand_i_arr = np.random.randint(L, size = len(domains[domain_idx]))
-                rand_j_arr = np.random.randint(L, size = len(domains[domain_idx]))
-                
+                rand_i_arr = np.random.randint(1, L+1, size=len(domains[domain_idx]))
+                rand_j_arr = np.random.randint(1, L+1, size=len(domains[domain_idx]))
+
                 # Calculate reference total r value from random sample with size equal to the domain size
                 for index in range(len(domains[domain_idx])):
                     rand_i = rand_i_arr[index]
@@ -107,8 +90,6 @@ def run_simulation(params = Parameters()):
 
         loop_10_counter += 1
         iteration_counter += 1
-        
-    plt.close(fig)
 
     print("Threshold force =", Fth)
     print("Mean force =", np.mean(F))

@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from collections import deque
 
 
 class Parameters:
@@ -9,160 +10,67 @@ class Parameters:
         self.Fth = 1.0
         self.K = 1.0
         self.KL = 1.0
-        self.iterations = 10000
-        self.begin_data = 6000
+        self.iterations = 70000
+        self.begin_data = 60000
         self.a = self.K/(4*self.K + self.KL)
         self.ae = self.K/(3*self.K + self.KL)
         self.ac = self.K/(2*self.K + self.KL)
 
 
 
-def drive(F, stack, params = Parameters()):
+def drive(F, params):
     Fth = params.Fth
     Fmax = np.max(F)
-    position = np.argwhere(F == Fmax)[0]
-    stack.add(tuple(position)) 
+    initial_site = np.argwhere(F == Fmax)[0]
     Fadd = Fth - Fmax
-    F += Fadd
-    
+    F[1:-1, 1:-1] += Fadd
+    return F, initial_site
 
 
-def relax_stack(F, stack, params = Parameters()):
-    
-    new_stack = set()
-    a = params.a
-    ae = params.ae
-    ac = params.ac
+
+def avalanche(F, initial_site, params, vis=None):
+
     Fth = params.Fth
+    a = params.a
     L = params.L
+
+    q = deque([initial_site]) 
     
-    for coord in stack:
-        i = coord[0]
-        j = coord[1]
-        F_ij = F[i,j]
-        F[i,j] = 0 # Reset the force at the site that has slipped
-        
-        N = [-1,1] # Used for iterating through nearest neighbours
-        
-        # Transfer force to nearest neighbours
-        # Need to deal with 4 corners, 4 edges and main body separately due to different force transfer ratios
-        if i == 0:
+    avalanche_size = 0
+    domain = set()  # To keep track of the domain of the avalanche
 
-            if j == 0: 
-                # (0,0) corner case
-                F[i+1,j] += ac*F_ij
-                F[i,j+1] += ac*F_ij
+    while q:
 
-                if F[i+1,j] >= Fth:
-                    new_stack.add((i+1,j))
+        i, j = q.popleft()
 
-                if F[i,j+1] >= Fth:
-                    new_stack.add((i,j+1))
+        if F[i, j] < Fth:
+            continue  # already relaxed (important safety check)
 
-            elif j == L:
-                # (0,L) corner case
-                F[i+1,j] += ac*F_ij
-                F[i,j-1] += ac*F_ij
+        # Record event
+        avalanche_size += 1
+        domain.add((i, j))  # Add to domain
 
-                if F[i+1,j] >= Fth:
-                    new_stack.add((i+1,j))
+        Fij = F[i, j]
+        F[i, j] = 0
 
-                if F[i,j-1] >= Fth:
-                    new_stack.add((i,j-1))
+        # neighbours (padded grid → no boundary checks needed)
+        neighbours = [
+            (i+1, j),
+            (i-1, j),
+            (i, j+1),
+            (i, j-1)
+        ]
 
-            else:
-                # (0,y) edge case
-                F[i+1,j] += ae*F_ij
-                F[i,j+1] += ae*F_ij
-                F[i,j-1] += ae*F_ij
+        for ni, nj in neighbours:
 
-                if F[i+1,j] >= Fth:
-                    new_stack.add((i+1,j))
+            if 1 <= ni <= L and 1 <= nj <= L: # Ensure padding is untouched
+                F[ni, nj] += a * Fij
 
-                if F[i,j+1] >= Fth:
-                    new_stack.add((i,j+1))
+                if F[ni, nj] >= Fth:
+                    q.append((ni, nj))
 
-                if F[i,j-1] >= Fth:
-                    new_stack.add((i,j-1))
-                      
-        elif i == L:
-            if j == 0:
-                # (L,0) corner case
-                F[i-1,j] += ac*F_ij
-                F[i,j+1] += ac*F_ij
+        if vis is not None:
+            vis.update(F)
 
-                if F[i-1,j] >= Fth:
-                    new_stack.add((i-1,j))
+    return F, avalanche_size, domain
 
-                if F[i,j+1] >= Fth:
-                    new_stack.add((i,j+1))  
-
-            elif j == L:
-                # (L,L) corner case
-                F[i-1,j] += ac*F_ij
-                F[i,j-1] += ac*F_ij
-
-                if F[i-1,j] >= Fth:
-                    new_stack.add((i-1,j))
-
-                if F[i,j-1] >= Fth:
-                    new_stack.add((i,j-1))
-            else:
-                # (L,y) edge case
-                F[i-1,j] += ae*F_ij
-                F[i,j+1] += ae*F_ij
-                F[i,j-1] += ae*F_ij
-
-                if F[i-1,j] >= Fth:
-                    new_stack.add((i-1,j))
-
-                if F[i,j+1] >= Fth:
-                    new_stack.add((i,j+1))
-
-                if F[i,j-1] >= Fth:
-                    new_stack.add((i,j-1))  
-
-        else:
-            if j == 0:
-                # (x,0) edge case
-                F[i+1,j] += ae*F_ij
-                F[i-1,j] += ae*F_ij
-                F[i,j+1] += ae*F_ij
-
-                if F[i+1,j] >= Fth:
-                    new_stack.add((i+1,j))
-
-                if F[i-1,j] >= Fth:
-                    new_stack.add((i-1,j))
-
-                if F[i,j+1] >= Fth:
-                    new_stack.add((i,j+1))
-
-            elif j == L:
-                # (x,L) edge case
-                F[i+1,j] += ae*F_ij
-                F[i-1,j] += ae*F_ij
-                F[i,j-1] += ae*F_ij
-
-                if F[i+1,j] >= Fth:
-                    new_stack.add((i+1,j))
-
-                if F[i-1,j] >= Fth:
-                    new_stack.add((i-1,j))
-
-                if F[i,j-1] >= Fth:
-                    new_stack.add((i,j-1)) 
-
-            else:
-                # (x,y) main body case
-                for n in N:
-                    F[i+n,j] += a*F_ij
-                    F[i,j+n] += a*F_ij
-
-                    if F[i+n,j] >= Fth:
-                        new_stack.add((i+n,j))
-
-                    if F[i,j+n] >= Fth:
-                        new_stack.add((i,j+n))
-                     
-    return F, new_stack

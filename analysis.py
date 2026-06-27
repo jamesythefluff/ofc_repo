@@ -59,7 +59,7 @@ def plot_domain_r(domains, r_arr, r_ref_arr, domain_no = 1):
         
 
 
-def plot_sizes(sizes, params = Parameters()):
+def plot_sizes(sizes, params):
      
     iterations = params.iterations
 
@@ -75,7 +75,7 @@ def plot_sizes(sizes, params = Parameters()):
 
 
 
-def plot_sizes_poisson(sizes, params = Parameters()):
+def plot_sizes_poisson(sizes, params):
      
     iterations = params.iterations
 
