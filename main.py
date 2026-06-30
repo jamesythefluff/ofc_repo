@@ -19,7 +19,7 @@ vis = None #Visualiser(im)
 
 sizes, domains, R_arr, r_arr, r_ref_arr = run_simulation(params, vis=vis)
 
-plot_time_series(sizes)
-plot_sizes(sizes, params)
+#plot_time_series(sizes)
+#plot_sizes(sizes, params)
 plot_R(R_arr)
 plot_domain_r(domains, r_arr, r_ref_arr)

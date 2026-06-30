@@ -6,12 +6,12 @@ from collections import deque
 class Parameters:
 
     def __init__(self):
-        self.L = 32
+        self.L = 50
         self.Fth = 1.0
         self.K = 1.0
         self.KL = 1.0
-        self.iterations = 70000
-        self.begin_data = 60000
+        self.iterations = 1000000
+        self.begin_data = 400000
         self.a = self.K/(4*self.K + self.KL)
         self.ae = self.K/(3*self.K + self.KL)
         self.ac = self.K/(2*self.K + self.KL)
