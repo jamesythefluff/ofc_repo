@@ -17,9 +17,9 @@ plt.show()"""
 
 vis = None #Visualiser(im)
 
-sizes, domains, R_arr, r_arr, r_ref_arr = run_simulation(params, vis=vis)
+sizes, domains, lattice = run_simulation(params, vis=vis)
 
-#plot_time_series(sizes)
-#plot_sizes(sizes, params)
-plot_R(R_arr)
-plot_domain_r(domains, r_arr, r_ref_arr)
+plot_time_series(sizes)
+plot_sizes(sizes, params)
+plot_lattice_R(lattice)
+plot_domain_R(domains)

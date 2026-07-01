@@ -5,6 +5,25 @@ from model import drive
 from model import avalanche
 
 
+class Domain:
+
+    def __init__(self, coords, phase):
+        self.coords = coords
+        self.size = len(coords)
+
+        self.R = 0j
+        for i, j in coords:
+            self.R += phase[i, j]
+        
+        self.history = []
+
+    def update(self, delta_phase):
+        self.R += delta_phase
+
+    def record(self):
+        self.history.append(np.abs(self.R) / self.size)
+
+
 def initialise(params):
     L = params.L
     F = np.zeros((L+2,L+2)) # Padded grid to avoid boundary checks
@@ -14,83 +33,78 @@ def initialise(params):
 
 def run_simulation(params, vis=None):
 
-    iterations = params.iterations
-    begin_data = params.begin_data
-    L = params.L
-    Fth = params.Fth
+    L, Fth, iterations, begin_data = params.unpack()
 
-    F = np.zeros((L+2,L+2)) # Padded grid to avoid boundary checks
-    F[1:-1, 1:-1] = np.random.rand(L, L)
+    F = initialise(params)
 
-    sizes = [] 
-    domains = [] 
-    r_arr = [[] for _ in range(iterations - begin_data)] 
-    R_arr = [] 
-    r_ref_arr = [[] for _ in range(iterations - begin_data)]
+    phase = np.exp(2j*np.pi*F)
+
+    domains = []
+    membership = {}
+    sizes = []
+    
+    lattice_coords = [(i, j) for i in range(1, L+1) for j in range(1, L+1)]
+    lattice_phase = phase # np.exp(2j * np.pi * F[1:-1, 1:-1])
+
+    lattice = Domain(lattice_coords, lattice_phase)
 
     iteration_counter = 0
     loop_10_counter = 0
 
     for n in range(iterations):
 
-        F, initial_site = drive(F, params)
-        F, avalanche_size, domain = avalanche(F, initial_site, params, vis)
-            
-        # Calculation of R value for entire lattice - expect plateau when steady state reached
-        if loop_10_counter == 1000: # Only calculate R value every 1000 iterations to save time
+        F, Fadd, initial_site = drive(F, params)
 
-            loop_10_counter = 0
+        phase_factor = np.exp(2j * np.pi * Fadd)
+        phase[1:-1, 1:-1] *= phase_factor
 
-            interior = F[1:-1, 1:-1]
- 
-            R_x = np.sum(np.cos(2*np.pi*interior))
-            R_y = np.sum(np.sin(2*np.pi*interior))
+        F, changed_sites = avalanche(F, initial_site, params, vis)
 
-            R_mod = np.sqrt(R_x**2 + R_y**2)
-            R_norm = R_mod / (L*L)
-            R_arr.append(R_norm)
+        coords = []
 
-            print(f"progress {iteration_counter/iterations*100:.3f} %") # Progress update
+        for coord, info in changed_sites.items():
+            coords.append(coord) 
         
-        if iteration_counter > begin_data: # Only take data once steady-state is reached
+        size = 0
+        delta_phase_tot = 0j
+
+        for coord, info in changed_sites.items():
             
-            sizes.append(avalanche_size)
+            new_force = info["new_force"]
+            size += info["topplings"]
+            i, j = coord
+            delta_phase = np.exp(2j * np.pi * new_force) - phase[i, j]
+            phase[i, j] += delta_phase
+            delta_phase_tot += delta_phase
 
-            if len(domains) < 1:
-                if len(domain) > 100: # Only look at reasonably sized domains
-                    domains.append(domain)
+            if coord in membership:
+                for domain_id in membership[coord]:
+                    domains[domain_id].update(delta_phase)
 
-            if loop_10_counter == 0: # Only calculate domain r values every 1000 iterations to save time
+            else:
+                membership[coord] = []
 
-                # Calculation of r values for each domain
-                for domain_idx in range(len(domains)):
-                    r = [0,0]
-                    for coord in domains[domain_idx]:
-                        i = coord[0]
-                        j = coord[1]
-                        F_ij = F[i,j]
-                        r_ij = [np.cos(2*np.pi*F_ij), np.sin(2*np.pi*F_ij)] # Vector in complex plane
-                        r[0] += r_ij[0]
-                        r[1] += r_ij[1]
-                        
-                    r_ref = [0,0]
-                    rand_i_arr = np.random.randint(1, L+1, size=len(domains[domain_idx]))
-                    rand_j_arr = np.random.randint(1, L+1, size=len(domains[domain_idx]))
+            domain_id = len(domains)
 
-                    # Calculate reference total r value from random sample with size equal to the domain size
-                    for index in range(len(domains[domain_idx])):
-                        rand_i = rand_i_arr[index]
-                        rand_j = rand_j_arr[index]
-                        F_ij_rand = F[rand_i,rand_j]
-                        r_ij_rand = [np.cos(2*np.pi*F_ij_rand), np.sin(2*np.pi*F_ij_rand)]
-                        r_ref[0] += r_ij_rand[0]
-                        r_ref[1] += r_ij_rand[1]
-                    
-                    r_mod_arr = np.sqrt(r[0]**2 + r[1]**2)
-                    r_ref_mod_arr = np.sqrt(r_ref[0]**2 + r_ref[1]**2)
+            if len(coords) > 100:
+                if n >= begin_data:
+                    membership[coord].append(domain_id)
 
-                    r_ref_arr[domain_idx].append(r_ref_mod_arr)
-                    r_arr[domain_idx].append(r_mod_arr)
+        lattice.update(delta_phase_tot)
+        sizes.append(size)
+
+        domain_coords = [coord for coord in coords]
+
+        domain = Domain(domain_coords, phase)
+
+        if domain.size > 100:
+            if n >= begin_data:
+                domains.append(domain)
+
+        for domain in domains:
+            domain.record()
+
+        print(f"progress: {n * 100 / iterations:.1f}%")
 
         loop_10_counter += 1
         iteration_counter += 1
@@ -100,4 +114,4 @@ def run_simulation(params, vis=None):
     print("Max earthquake size =", np.max(sizes))
     print("Mean earthquake size =", np.mean(sizes))
 
-    return sizes, domains, R_arr, r_arr, r_ref_arr
+    return sizes, domains, lattice

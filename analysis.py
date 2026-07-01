@@ -15,10 +15,10 @@ def plot_time_series(sizes):
 
 
 
-def plot_R(R_arr):
-    x = np.arange(len(R_arr))
+def plot_lattice_R(lattice):
+    x = np.arange(len(lattice.history))
     plt.figure()
-    plt.scatter(x, R_arr)
+    plt.scatter(x, lattice.history)
     plt.title("Synchronisation of entire lattice over time")
     plt.xlabel("Time")
     plt.ylabel("Modulus of R")
@@ -26,29 +26,21 @@ def plot_R(R_arr):
 
 
 
-def plot_domain_r(domains, r_arr, r_ref_arr):
+def plot_domain_R(domains):
 
-    for i in range(len(domains)):
+    for domain in domains:
             
-            domain_size = len(domains[i])
-            r_mod_domain = r_arr[i]
-            r_ref_mod_domain = r_ref_arr[i]
+            R_domain = domain.history
 
-            print("Domain size =", domain_size)
+            print("Domain size =", domain.size)
+            time_arr = np.arange(len(R_domain))
             
-            # Normalise
-            r_norm_domain = np.array(r_mod_domain) / domain_size 
-            r_ref_norm_domain =  np.array(r_ref_mod_domain) / domain_size
-            
-            time_arr = np.arange(len(r_norm_domain))
-            
-            # Plot magnitude of r over time for each domain
+            # Plot magnitude of R over time for each domain
             plt.figure()
-            plt.scatter(time_arr, r_ref_norm_domain)
-            plt.scatter(time_arr, r_norm_domain)
-            plt.title(f"Synchronisation of domain {i} over time")
+            plt.scatter(time_arr, R_domain)
+            plt.title(f"Synchronisation of domain size {domain.size} over time")
             plt.xlabel("Time")
-            plt.ylabel("Normalised Magnitude of r")
+            plt.ylabel("Normalised Magnitude of R")
             plt.show(block = True)
 
         
