@@ -19,7 +19,7 @@ vis = None #Visualiser(im)
 
 sizes, domains, lattice = run_simulation(params, vis=vis)
 
-plot_time_series(sizes)
-plot_sizes(sizes, params)
+#plot_time_series(sizes)
 plot_lattice_R(lattice)
 plot_domain_R(domains)
+plot_sizes_poisson(sizes, params)

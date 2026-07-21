@@ -7,3 +7,5 @@ class Visualiser:
     def update(self, F):
         self.im.set_data(F)
         plt.pause(0.0001)
+
+        

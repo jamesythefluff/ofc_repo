@@ -1,6 +1,7 @@
+from cmath import phase
+
 import numpy as np
 import matplotlib.pyplot as plt
-from model import Parameters
 from model import drive
 from model import avalanche
 
@@ -12,9 +13,10 @@ class Domain:
         self.size = len(coords)
 
         self.R = 0j
-        for i, j in coords:
+        for coord in coords:
+            i, j = coord
             self.R += phase[i, j]
-        
+
         self.history = []
 
     def update(self, delta_phase):
@@ -22,6 +24,13 @@ class Domain:
 
     def record(self):
         self.history.append(np.abs(self.R) / self.size)
+
+    def recompute(self, phase):
+        R = 0j
+        for coord in self.coords:
+            i, j = coord
+            R += phase[i, j]
+        return R
 
 
 def initialise(params):
@@ -44,10 +53,7 @@ def run_simulation(params, vis=None):
     sizes = []
     
     lattice_coords = [(i, j) for i in range(1, L+1) for j in range(1, L+1)]
-    lattice_phase = phase # np.exp(2j * np.pi * F[1:-1, 1:-1])
-
-    lattice = Domain(lattice_coords, lattice_phase)
-
+    
     iteration_counter = 0
     loop_10_counter = 0
 
@@ -57,6 +63,8 @@ def run_simulation(params, vis=None):
 
         phase_factor = np.exp(2j * np.pi * Fadd)
         phase[1:-1, 1:-1] *= phase_factor
+
+        lattice = Domain(lattice_coords, phase)
 
         F, changed_sites = avalanche(F, initial_site, params, vis)
 
@@ -86,9 +94,8 @@ def run_simulation(params, vis=None):
 
             domain_id = len(domains)
 
-            if len(coords) > 100:
-                if n >= begin_data:
-                    membership[coord].append(domain_id)
+            if len(domains) < 1 and len(coords) > 150 and n > begin_data:
+                membership[coord].append(domain_id)
 
         lattice.update(delta_phase_tot)
         sizes.append(size)
@@ -97,11 +104,11 @@ def run_simulation(params, vis=None):
 
         domain = Domain(domain_coords, phase)
 
-        if domain.size > 100:
-            if n >= begin_data:
-                domains.append(domain)
+        if len(domains) < 1 and len(coords) > 150 and n > begin_data:
+            domains.append(domain)
 
         for domain in domains:
+            domain.R = domain.recompute(phase)
             domain.record()
 
         print(f"progress: {n * 100 / iterations:.1f}%")

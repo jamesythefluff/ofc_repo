@@ -16,9 +16,10 @@ def plot_time_series(sizes):
 
 
 def plot_lattice_R(lattice):
-    x = np.arange(len(lattice.history))
+    R_lattice = lattice.history[::1000]
+    x = np.arange(len(R_lattice))
     plt.figure()
-    plt.scatter(x, lattice.history)
+    plt.scatter(x, R_lattice)
     plt.title("Synchronisation of entire lattice over time")
     plt.xlabel("Time")
     plt.ylabel("Modulus of R")
@@ -30,7 +31,7 @@ def plot_domain_R(domains):
 
     for domain in domains:
             
-            R_domain = domain.history
+            R_domain = domain.history[::1000]
 
             print("Domain size =", domain.size)
             time_arr = np.arange(len(R_domain))

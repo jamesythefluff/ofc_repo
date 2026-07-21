@@ -6,13 +6,13 @@ from collections import deque
 class Parameters:
 
     def __init__(self):
-        self.L = 50
+        self.L = 32
         self.Fth = 1.0
         self.K = 1.0
         self.KL = 1.0
 
-        self.iterations = 1000000
-        self.begin_data = 400000
+        self.iterations = 100000
+        self.begin_data = 40000
 
     def unpack(self):
         return self.L, self.Fth, self.iterations, self.begin_data
@@ -96,7 +96,6 @@ def avalanche(F, initial_site, params, vis=None):
                 F[ni, nj] += a * Fij
                 
                 changed_sites[coord]["new_force"] = F[ni, nj]
-                changed_sites[coord]["topplings"] += 1
 
                 if F[ni, nj] >= Fth:
                     q.append((ni, nj))
