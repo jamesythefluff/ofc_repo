@@ -41,7 +41,7 @@ def drive(F, params):
 
 
 
-def avalanche(F, initial_site, params, vis=None):
+def avalanche(F, initial_site, params, vis_force=None, vis_phase=None):
 
     Fth = params.Fth
     a = params.a
@@ -85,10 +85,8 @@ def avalanche(F, initial_site, params, vis=None):
                 if F[ni, nj] >= Fth:
                     q.append((ni, nj))
 
-        if vis is not None:
-            vis.update(F)
+        if vis_force is not None:
+            vis_force.update(F)
 
-    phase = np.exp(2j * np.pi * F)
-
-    return F, phase, toppled_sites, topplings
+    return F, toppled_sites, topplings
 

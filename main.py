@@ -1,6 +1,6 @@
 from simulation import initialise, run_simulation
 from analysis import *
-from visualiser import Visualiser
+from visualiser import ForceVisualiser, PhaseVisualiser
 
 params = Parameters()
 
@@ -15,9 +15,31 @@ ax.set_xlabel('x')
 ax.set_ylabel('y')
 plt.show()"""
 
-vis = None #Visualiser(im)
+vis_force = None #ForceVisualiser(im)
 
-sizes, domains, lattice = run_simulation(params, vis=vis)
+
+# Domain synchronisation unit circle visualisation
+
+plt.ion()
+
+fig, ax = plt.subplots(figsize=(6,6))
+
+# Draw unit circle
+theta = np.linspace(0, 2*np.pi, 300)
+ax.plot(np.cos(theta), np.sin(theta), 'k--')
+
+ax.set_aspect('equal')
+ax.set_xlim(-1.2, 1.2)
+ax.set_ylim(-1.2, 1.2)
+
+fig.canvas.draw()
+fig.canvas.flush_events()
+plt.pause(0.001)
+
+vis_phase = PhaseVisualiser(ax)
+
+
+sizes, domains, lattice = run_simulation(params, vis_force=vis_force, vis_phase=vis_phase)
 
 #plot_time_series(sizes)
 plot_lattice_R(lattice)

@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from model import drive
 from model import avalanche
+from visualiser import ForceVisualiser, PhaseVisualiser
 
 
 class Domain:
@@ -37,7 +38,7 @@ def initialise(params):
     return F
 
 
-def run_simulation(params, vis=None):
+def run_simulation(params, vis_force=None, vis_phase=None):
 
     L, Fth, iterations, begin_data = params.unpack()
 
@@ -53,20 +54,27 @@ def run_simulation(params, vis=None):
     iteration_counter = 0
     loop_10_counter = 0
 
+    start_circle_vis = False
+
     for n in range(iterations):
 
         F, initial_site = drive(F, params)
+        F, toppled_sites, topplings = avalanche(F, initial_site, params, vis_force, vis_phase)
 
-        F, phase, toppled_sites, topplings = avalanche(F, initial_site, params, vis)
+        phase = np.exp(2j * np.pi * F)
+
+        if start_circle_vis == True:
+            vis_phase.update(F, circle_vis_domain)
 
         sizes.append(topplings)
-
         domain_coords = list(toppled_sites)
 
         domain = Domain(domain_coords, phase)
 
         if len(domains) < 1 and len(domain_coords) > 150 and n > begin_data:
             domains.append(domain)
+            circle_vis_domain = np.array(domain_coords)
+            start_circle_vis = True
 
         for domain in domains:
             domain.R = domain.update(phase)
@@ -76,9 +84,6 @@ def run_simulation(params, vis=None):
         lattice.record()
 
         print(f"progress: {n * 100 / iterations:.1f}%")
-
-        loop_10_counter += 1
-        iteration_counter += 1
 
     print("Threshold force =", Fth)
     print("Mean force =", np.mean(F))
