@@ -1,92 +1,162 @@
-from cmath import phase
+"""
+simulation.py
 
+Runs the OFC simulation by repeatedly driving the lattice,
+generating avalanches, updating tracked domains, and recording
+synchronisation statistics.
+
+Author: Anne-Marie
+Date: July 2026
+"""
+
+# -------------------------------------
+# Import libraries
+# -------------------------------------
 import numpy as np
-import matplotlib.pyplot as plt
 from model import drive
 from model import avalanche
-from visualiser import ForceVisualiser, PhaseVisualiser
 
+class TrackedDomain:
+    """
+    Represents a collection of lattice sites whose synchronisation
+    is tracked throughout the simulation.
 
-class Domain:
+    Attributes
+    ----------
+    coords : list[(int, int)]
+        Coordinates belonging to the domain.
+    size : int
+        Number of sites in the domain.
+    R : complex
+        Complex Kuramoto order parameter.
+    history : list[float]
+        Time series of |R|/N.
 
-    def __init__(self, coords, phase):
+    Methods
+    -------
+    compute_R(phase_vectors)
+        Computes the Kuramoto order parameter for the domain.
+    update(phase_vectors)
+        Updates the Kuramoto order parameter and appends its normalised magnitude to the history.
+    """
+    def __init__(self, coords, phase_vectors):
         self.coords = coords
         self.size = len(coords)
-
-        self.R = 0j
-        for coord in coords:
-            i, j = coord
-            self.R += phase[i, j]
-
+        self.compute_R(phase_vectors)
         self.history = []
 
-    def update(self, phase):
-        R = 0j
-        for coord in self.coords:
-            i, j = coord
-            R += phase[i, j]
-        return R
+    def compute_R(self, phase_vectors):
+        phase_vectors = np.array(phase_vectors)
+        self.R = 0j
+        for i,j in self.coords:
+            self.R += phase_vectors[i, j]
 
-    def record(self):
+    def update(self, phase_vectors):
+        self.compute_R(phase_vectors)
         self.history.append(np.abs(self.R) / self.size)
-
+        
 
 def initialise(params):
+    """
+    Initialises an L by L lattice with padded boundaries.
+
+    Returns
+    -------
+    forces : np.ndarray
+        Randomly initialised force lattice with padded boundaries.
+    phase_vectors : np.ndarray
+        Complex phase vectors for each lattice site.
+    """
     L = params.L
-    F = np.zeros((L+2,L+2)) # Padded grid to avoid boundary checks
-    F[1:-1, 1:-1] = np.random.rand(L, L)
-    return F
+    forces = np.zeros((L+2,L+2)) # Padded grid to avoid boundary checks
+    forces[1:-1, 1:-1] = np.random.rand(L, L)
+    phase_vectors = np.exp(2j*np.pi*forces)
+    return forces, phase_vectors
 
 
 def run_simulation(params, vis_force=None, vis_phase=None):
+    """
+    Runs the OFC simulation.
 
-    L, Fth, iterations, begin_data = params.unpack()
+    Returns
+    -------
+    sizes : list
+        Time series of avalanche sizes.
+    domains : list[TrackedDomain]
+        Tracked domains.
+    lattice : TrackedDomain
+        Entire lattice domain.
+    """
+    # -------------------------------------------------
+    # INITIALISE
+    # -------------------------------------------------
 
-    F = initialise(params)
-    phase = np.exp(2j*np.pi*F)
+    # Model parameters
+    L = params.L
+    ITERATIONS = params.iterations
+    BEGIN_TRACKING = params.begin_data
+    TRACKED_DOMAINS = params.tracked_domain_no
+    MIN_DOMAIN_SIZE = params.min_domain_size
 
-    domains = []
-    sizes = []
-    
+    # Initialize random force lattice
+    forces, phase_vectors = initialise(params)
+
+    # Initialise entire lattice domain for total synchronisation tracking
     lattice_coords = [(i, j) for i in range(1, L+1) for j in range(1, L+1)]
-    lattice = Domain(lattice_coords, phase)
+    lattice = TrackedDomain(lattice_coords, phase_vectors)
+
+    # Store quake size time series and tracked domains
+    sizes = []
+    domains = []
     
-    iteration_counter = 0
-    loop_10_counter = 0
+    # Domain for unit circle order parameter visualiser
+    displayed_domain = None
 
-    start_circle_vis = False
+    # -------------------------------------------------
+    # RUN SIMULATION
+    # -------------------------------------------------
+    for n in range(ITERATIONS):
 
-    for n in range(iterations):
+        # -------------------------------------------------
+        # Drive the lattice and generate an avalanche
+        # -------------------------------------------------
+        forces, seed_site = drive(forces, params)
+        forces, phase_vectors, toppled_sites, topplings = avalanche(forces, seed_site, params, vis_force, vis_phase)
 
-        F, initial_site = drive(F, params)
-        F, toppled_sites, topplings = avalanche(F, initial_site, params, vis_force, vis_phase)
-
-        phase = np.exp(2j * np.pi * F)
-
-        if start_circle_vis == True:
-            vis_phase.update(F, circle_vis_domain)
-
+        # Update time series
         sizes.append(topplings)
-        domain_coords = list(toppled_sites)
 
-        domain = Domain(domain_coords, phase)
+        # Update unit circle visualisation
+        if displayed_domain is not None:
+            vis_phase.update(forces, displayed_domain)
 
-        if len(domains) < 1 and len(domain_coords) > 150 and n > begin_data:
+        # If the domain is suitable store it for tracking and visualisation
+        should_track = (len(domains) < TRACKED_DOMAINS and 
+                           len(toppled_sites) > MIN_DOMAIN_SIZE and 
+                           n > BEGIN_TRACKING)
+        if should_track:
+            domain = TrackedDomain(toppled_sites, phase_vectors)
             domains.append(domain)
-            circle_vis_domain = np.array(domain_coords)
-            start_circle_vis = True
+            displayed_domain = toppled_sites
 
-        for domain in domains:
-            domain.R = domain.update(phase)
-            domain.record()
+        # ------------------------------------------------
+        # Update tracked domains and entire lattice domain
+        # ------------------------------------------------
+        for tracked_domain in domains:
+            tracked_domain.update(phase_vectors)
 
-        lattice.R = lattice.update(phase)
-        lattice.record()
+        lattice.update(phase_vectors)
 
-        print(f"progress: {n * 100 / iterations:.1f}%")
+        # ------------------------------------------------
+        # Progress
+        # ------------------------------------------------
+        if n % 1000 == 0:
+            print(f"progress: {n * 100 / ITERATIONS:.1f}%")
 
-    print("Threshold force =", Fth)
-    print("Mean force =", np.mean(F))
+    # ------------------------------------------------
+    # Print summary
+    # ------------------------------------------------
+    print("Mean force =", np.mean(forces[1:-1, 1:-1]))
     print("Max earthquake size =", np.max(sizes))
     print("Mean earthquake size =", np.mean(sizes))
 

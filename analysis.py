@@ -1,80 +1,165 @@
+"""
+analysis.py
+
+Provides analysis and plotting utilities for the OFC earthquake
+simulation.
+
+The functions in this module visualise quantities recorded during
+the simulation, including
+
+    • earthquake size time series,
+    • synchronisation histories,
+    • earthquake size distributions.
+
+The earthquake size distribution is plotted on logarithmic axes
+to investigate whether the OFC model exhibits power-law behaviour,
+a characteristic feature of self-organised critical systems.
+
+Synchronisation histories are plotted to study the evolution of
+local and global order parameters during the simulation.
+
+These functions are intended to be called after the simulation has
+completed and do not modify the simulation state.
+
+Author: Anne-Marie
+Date: July 2026
+"""
+# -------------------------------------------------
+# IMPORT LIBRARIES
+# -------------------------------------------------
 import numpy as np
 import matplotlib.pyplot as plt
-from model import Parameters
 
+# Useful plotting function
+def finish_plot(title, xlabel, ylabel):
+    plt.title(title)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.grid(True, which="both", alpha=0.3)
+    plt.show(block=True)
 
+# -------------------------------------------------
+# EARTHQUAKE SIZE ANALYSIS
+# -------------------------------------------------
 def plot_time_series(sizes):
+    """
+    Plots the earthquake size as a function of simulation time.
+
+    Earthquake sizes are normalised by the maximum recorded
+    earthquake size to aid visualisation.
+
+    Parameters
+    ----------
+    sizes : array-like
+        Time series of earthquake sizes recorded during the
+        simulation.
+    """
     time = np.arange(len(sizes))
     scaled_sizes = sizes / np.max(sizes)
+
     plt.figure()
     plt.bar(time, scaled_sizes)
-    plt.title("Earthquake size over time")
-    plt.xlabel("Time")
-    plt.ylabel("Scaled Earthquake Size")
-    plt.show(block = True)
 
+    finish_plot(
+    "Earthquake Size Time Series",
+    "Time",
+    "Scaled Earthquake Size"
+    )
 
+def plot_sizes(sizes, params):
+    """
+    Plots the earthquake size probability distribution on
+    logarithmic axes with Poisson uncertainty.
 
-def plot_lattice_R(lattice):
-    R_lattice = lattice.history[::1000]
-    x = np.arange(len(R_lattice))
+    The probability of each earthquake size is calculated
+    from the recorded simulation data, and the uncertainty
+    is estimated assuming Poisson counting statistics.
+
+    Parameters
+    ----------
+    sizes : array-like
+        Time series of earthquake sizes.
+
+    params : Parameters
+        Simulation parameters used to determine the total
+        number of iterations.
+    """
+    iterations = params.iterations
+
+    unique_sizes, counts = np.unique(sizes, return_counts=True) # Count the number of occurrences of each earthquake size
+    probability = counts / iterations
+    uncertainty = np.sqrt(counts) / iterations # Poisson statistics uncertainty
+
+    # Earthquake probability vs size plot log-log plot with Poisson errorbars
     plt.figure()
-    plt.scatter(x, R_lattice)
-    plt.title("Synchronisation of entire lattice over time")
-    plt.xlabel("Time")
-    plt.ylabel("Modulus of R")
+    plt.errorbar(unique_sizes, probability, yerr = uncertainty, fmt = ".")
+    plt.xscale("log")
+    plt.yscale("log")
+
+    finish_plot(
+    "Earthquake Size Distribution",
+    "Earthquake Size",
+    "Probability"
+    )
+
+# -------------------------------------------------
+# SYNCHRONISATION ANALYSIS
+# -------------------------------------------------
+
+# -------------------------------------------------
+# Plot lattice synchronisation
+# -------------------------------------------------
+def plot_lattice_R(lattice):
+    """
+    Plots the synchronisation history of the entire lattice.
+
+    Parameters
+    ----------
+    lattice : TrackedDomain
+        Object representing the whole lattice. Its recorded
+        synchronisation history is plotted.
+    """
+    sample = 1000
+    R_lattice = lattice.history[::sample]
+    time = np.arange(len(R_lattice))
+    plt.figure()
+    plt.scatter(time, R_lattice)
+
+    finish_plot(
+    "Synchronisation of entire lattice over time",
+    "Time",
+    "Normalised Magnitude of R"
+    )
+
     plt.show(block = True)
 
-
-
+# -------------------------------------------------
+# Plot domain synchronisation
+# -------------------------------------------------
 def plot_domain_R(domains):
+    """
+    Plots the synchronisation histories of all tracked domains.
 
+    Parameters
+    ----------
+    domains : list[TrackedDomain]
+        Collection of tracked domains.
+    """
     for domain in domains:
             
             R_domain = domain.history[::1000]
 
             print("Domain size =", domain.size)
-            time_arr = np.arange(len(R_domain))
+            time = np.arange(len(R_domain))
             
             # Plot magnitude of R over time for each domain
             plt.figure()
-            plt.scatter(time_arr, R_domain)
-            plt.title(f"Synchronisation of domain size {domain.size} over time")
-            plt.xlabel("Time")
-            plt.ylabel("Normalised Magnitude of R")
+            plt.scatter(time, R_domain)
+            
+            finish_plot(
+            f"Synchronisation of domain size {domain.size} over time",
+            "Time",
+            "Normalised Magnitude of R"
+            )
+
             plt.show(block = True)
-
-        
-
-
-def plot_sizes(sizes, params):
-     
-    iterations = params.iterations
-
-    unique_sizes, counts = np.unique(sizes, return_counts=True) # Count the number of occurrences of each earthquake size
-    prob = counts / iterations
-
-    # Earthquake probability vs size plot
-    plt.figure()
-    plt.scatter(unique_sizes, prob)
-    plt.xlabel("Earthquake size")
-    plt.ylabel("Probability")
-    plt.show(block = True)
-
-
-
-def plot_sizes_poisson(sizes, params):
-     
-    iterations = params.iterations
-
-    unique_sizes, counts = np.unique(sizes, return_counts=True) # Count the number of occurrences of each earthquake size
-    prob = counts / iterations
-    uncertainty = np.sqrt(counts) / iterations # Poisson statistics uncertainty
-
-    # Earthquake probability vs size plot log-log plot with Poisson errorbars
-    plt.figure()
-    plt.errorbar(unique_sizes, prob, yerr = uncertainty, fmt = ".")
-    plt.loglog()
-    plt.xlabel("Earthquake size")
-    plt.ylabel("Probability")
-    plt.show(block = True)
