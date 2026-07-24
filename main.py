@@ -19,11 +19,16 @@ Author: Anne-Marie
 Date: July 2026
 """
 # -------------------------------------------------
+# IMPORT LIBRARIES
+# -------------------------------------------------
+import matplotlib.pyplot as plt
+
+# -------------------------------------------------
 # IMPORT MODULES
 # -------------------------------------------------
 from model import Parameters
 from simulation import initialise, run_simulation
-from analysis import *
+from plotting import plot_time_series, plot_sizes, plot_power_law_fit, plot_domain_R, plot_lattice_R
 from visualiser import ForceVisualiser, PhaseVisualiser
 
 # -------------------------------------------------
@@ -49,7 +54,7 @@ vis_force = None # ForceVisualiser(im)
 # -------------------------------------------------
 # PHASE-CIRCLE SYNCHRONISATION VISUALISATION
 # -------------------------------------------------
-plt.ion()
+"""plt.ion()
 fig, ax = plt.subplots(figsize=(6,6))
 # Draw unit circle
 theta = np.linspace(0, 2*np.pi, 300)
@@ -59,9 +64,9 @@ ax.set_xlim(-1.2, 1.2)
 ax.set_ylim(-1.2, 1.2)
 fig.canvas.draw()
 fig.canvas.flush_events()
-plt.pause(0.001)
+plt.pause(0.001)"""
 
-vis_phase = PhaseVisualiser(ax)
+vis_phase = None # PhaseVisualiser(ax)
 
 # -------------------------------------------------
 # RUN SIMULATION
@@ -78,4 +83,4 @@ sizes, domains, lattice = run_simulation(params, vis_force=vis_force, vis_phase=
 # -------------------------------------------------
 plot_lattice_R(lattice)
 plot_domain_R(domains)
-plot_sizes(sizes, params)
+plot_power_law_fit(sizes)

@@ -28,138 +28,81 @@ Date: July 2026
 # IMPORT LIBRARIES
 # -------------------------------------------------
 import numpy as np
-import matplotlib.pyplot as plt
-
-# Useful plotting function
-def finish_plot(title, xlabel, ylabel):
-    plt.title(title)
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    plt.grid(True, which="both", alpha=0.3)
-    plt.show(block=True)
+from scipy.stats import linregress
 
 # -------------------------------------------------
-# EARTHQUAKE SIZE ANALYSIS
+# CALCULATE EARTHQUAKE SIZE DISTRIBUTION
 # -------------------------------------------------
-def plot_time_series(sizes):
+def earthquake_distribution(sizes):
     """
-    Plots the earthquake size as a function of simulation time.
-
-    Earthquake sizes are normalised by the maximum recorded
-    earthquake size to aid visualisation.
+    Calculates the probability distribution of earthquake sizes.
 
     Parameters
     ----------
     sizes : array-like
-        Time series of earthquake sizes recorded during the
-        simulation.
+        Recorded earthquake sizes.
+
+    Returns
+    -------
+    unique_sizes : np.ndarray
+        Unique earthquake sizes.
+
+    probability : np.ndarray
+        Probability of each earthquake size.
+
+    poisson_errors : np.ndarray
+        Poisson statistical uncertainty in calculates probabilities.
     """
-    time = np.arange(len(sizes))
-    scaled_sizes = sizes / np.max(sizes)
 
-    plt.figure()
-    plt.bar(time, scaled_sizes)
+    unique_sizes, counts = np.unique(sizes, return_counts=True)
+    probability = counts / len(sizes)
+    poisson_errors = np.sqrt(counts / len(sizes))
 
-    finish_plot(
-    "Earthquake Size Time Series",
-    "Time",
-    "Scaled Earthquake Size"
-    )
+    return unique_sizes, probability, poisson_errors
 
-def plot_sizes(sizes, params):
+# -------------------------------------------------
+# FIT LINEAR REGRESSION TO EXTRACT POWER LAW EXPONENT
+# -------------------------------------------------
+def fit_power_law(sizes):
     """
-    Plots the earthquake size probability distribution on
-    logarithmic axes with Poisson uncertainty.
+    Fits a power law to the earthquake size distribution.
 
-    The probability of each earthquake size is calculated
-    from the recorded simulation data, and the uncertainty
-    is estimated assuming Poisson counting statistics.
+    Assumes
+
+        P(s) ∝ s^(-tau)
+
+    and performs linear regression in log-log space.
 
     Parameters
     ----------
     sizes : array-like
-        Time series of earthquake sizes.
+        Recorded earthquake sizes.
 
-    params : Parameters
-        Simulation parameters used to determine the total
-        number of iterations.
+    Returns
+    -------
+    gradient : float
+        Fitted gradient = -tau where tau is the power law exponent.
+
+    intercept : float
+        Fitted y-intercept.
+
+    r_squared : float
+        Goodness of fit.
     """
-    iterations = params.iterations
 
-    unique_sizes, counts = np.unique(sizes, return_counts=True) # Count the number of occurrences of each earthquake size
-    probability = counts / iterations
-    uncertainty = np.sqrt(counts) / iterations # Poisson statistics uncertainty
+    unique_sizes, probability, poisson_errors = earthquake_distribution(sizes)
 
-    # Earthquake probability vs size plot log-log plot with Poisson errorbars
-    plt.figure()
-    plt.errorbar(unique_sizes, probability, yerr = uncertainty, fmt = ".")
-    plt.xscale("log")
-    plt.yscale("log")
+    # Remove zero values before taking logs
+    mask = probability > 0
 
-    finish_plot(
-    "Earthquake Size Distribution",
-    "Earthquake Size",
-    "Probability"
-    )
+    # Convert to log space
+    log_sizes = np.log(unique_sizes[mask])
+    log_probability = np.log(probability[mask])
 
-# -------------------------------------------------
-# SYNCHRONISATION ANALYSIS
-# -------------------------------------------------
+    fit = linregress(log_sizes, log_probability)
 
-# -------------------------------------------------
-# Plot lattice synchronisation
-# -------------------------------------------------
-def plot_lattice_R(lattice):
-    """
-    Plots the synchronisation history of the entire lattice.
+    gradient = -fit.slope
+    intercept = fit.intercept
+    r_squared = fit.rvalue**2
 
-    Parameters
-    ----------
-    lattice : TrackedDomain
-        Object representing the whole lattice. Its recorded
-        synchronisation history is plotted.
-    """
-    sample = 1000
-    R_lattice = lattice.history[::sample]
-    time = np.arange(len(R_lattice))
-    plt.figure()
-    plt.scatter(time, R_lattice)
-
-    finish_plot(
-    "Synchronisation of entire lattice over time",
-    "Time",
-    "Normalised Magnitude of R"
-    )
-
-    plt.show(block = True)
-
-# -------------------------------------------------
-# Plot domain synchronisation
-# -------------------------------------------------
-def plot_domain_R(domains):
-    """
-    Plots the synchronisation histories of all tracked domains.
-
-    Parameters
-    ----------
-    domains : list[TrackedDomain]
-        Collection of tracked domains.
-    """
-    for domain in domains:
-            
-            R_domain = domain.history[::1000]
-
-            print("Domain size =", domain.size)
-            time = np.arange(len(R_domain))
-            
-            # Plot magnitude of R over time for each domain
-            plt.figure()
-            plt.scatter(time, R_domain)
-            
-            finish_plot(
-            f"Synchronisation of domain size {domain.size} over time",
-            "Time",
-            "Normalised Magnitude of R"
-            )
-
-            plt.show(block = True)
+    return gradient, intercept, r_squared

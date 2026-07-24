@@ -127,7 +127,7 @@ def run_simulation(params, vis_force=None, vis_phase=None):
         sizes.append(topplings)
 
         # Update unit circle visualisation
-        if displayed_domain is not None:
+        if vis_phase is not None and displayed_domain is not None:
             vis_phase.update(forces, displayed_domain)
 
         # If the domain is suitable store it for tracking and visualisation
