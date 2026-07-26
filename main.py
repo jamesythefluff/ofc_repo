@@ -84,4 +84,4 @@ sizes, domains, lattice = run_simulation(params, vis_force=vis_force, vis_phase=
 plot_lattice_R(lattice)
 #plot_domain_R(domains)
 plot_power_law_fit(sizes)
-plot_average_synchronisation_history(domains, params)
+plot_desynchronisation(domains, params)

@@ -29,6 +29,18 @@ Date: July 2026
 # -------------------------------------------------
 import numpy as np
 from scipy.stats import linregress
+from scipy.optimize import curve_fit
+
+# -------------------------------------------------
+# EXPONENTIAL DECAY MODEL
+# -------------------------------------------------
+def exponential(t, A, tau, C):
+    """
+    Exponential decay model.
+
+    R(t) = C + A exp(-t/tau)
+    """
+    return C + A * np.exp(-t / tau)
 
 # -------------------------------------------------
 # CALCULATE EARTHQUAKE SIZE DISTRIBUTION
@@ -118,4 +130,33 @@ def average_domain_synchronicity(domains, params):
         normalised_history = history #/ history[0]
         total_synchronisation_history += normalised_history
     average_synchronisation_history = total_synchronisation_history / len(domains)
-    return average_synchronisation_history
+    time = np.arange(SYNCHRONISATION_HISTORY_LENGTH)
+    return average_synchronisation_history, time
+
+# -------------------------------------------------
+# EXPONENTIAL FIT TO DESYNCHRONICITY CURVE
+# -------------------------------------------------
+def fit_exponential(mean_R, time):
+    # Exclude initial peak for fitting
+    peak = np.argmax(mean_R)
+    time_fit = time[peak:]
+    mean_R_fit = mean_R[peak:]
+
+    # Initial guesses
+    A0 = np.max(mean_R_fit) - np.min(mean_R_fit)
+    tau0 = len(time_fit) / 10
+    C0 = np.min(mean_R_fit)
+
+    popt, pcov = curve_fit(
+        exponential,
+        time_fit,
+        mean_R_fit,
+        p0=[A0, tau0, C0]
+    )
+
+    A, tau, C = popt
+    print(f'A = {A}, τ = {tau}, C = {C}')
+
+    fitted_R = exponential(time_fit, A, tau, C)
+
+    return time_fit, fitted_R, popt

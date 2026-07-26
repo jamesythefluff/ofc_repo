@@ -30,7 +30,7 @@ import matplotlib.pyplot as plt
 # -------------------------------------------------
 # IMPORT MODULES
 # -------------------------------------------------
-from analysis import earthquake_distribution, fit_power_law, average_domain_synchronicity
+from analysis import *
 
 # Useful plotting function
 def finish_plot(title, xlabel, ylabel):
@@ -216,16 +216,22 @@ def plot_domain_R(domains):
         "Normalised Magnitude of R"
         )
 
-def plot_average_synchronisation_history(domains, params):
+def plot_desynchronisation(domains, params):
     
-    average_synchronisation_history = average_domain_synchronicity(domains, params)
-    time = np.arange(len(average_synchronisation_history))
+    mean_R, time = average_domain_synchronicity(domains, params)
+
+    time_fit, mean_R_fit, popt = fit_exponential(mean_R, time)
+    A, tau, C = popt
+
+    a = params.a
 
     plt.figure()
-    plt.scatter(time, average_synchronisation_history)
+    plt.scatter(time, mean_R, label = 'Data')
+    plt.plot(time_fit, mean_R_fit, label = f'Exponential fit τ = {tau}')
+    plt.legend()
 
     finish_plot(
-            "Averaged Domain Synchronisation Time Series",
+            f"Average Synchronisation Time Series α = {a}",
             "Time",
             f"Synchronisation Averaged over {len(domains)} Domains"
             )

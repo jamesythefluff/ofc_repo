@@ -56,12 +56,12 @@ class Parameters:
         # Model parameters
         self.L = 32
         self.Fth = 1.0
-        self.K = 1.0
+        self.K = 2.0
         self.KL = 1.0
         # Simulation parameters
-        self.iterations = 100000
+        self.iterations = 200000
         self.begin_data = 40000
-        self.tracked_domain_no = 2000
+        self.tracked_domain_no = 1000
         self.min_domain_size = 10
         self.max_domain_size = 20
         self.synchronisation_history_length = 3000
