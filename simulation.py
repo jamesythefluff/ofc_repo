@@ -97,6 +97,8 @@ def run_simulation(params, vis_force=None, vis_phase=None):
     BEGIN_TRACKING = params.begin_data
     TRACKED_DOMAINS = params.tracked_domain_no
     MIN_DOMAIN_SIZE = params.min_domain_size
+    MAX_DOMAIN_SIZE = params.max_domain_size
+    SYNCHRONISATION_HISTORY_LENGTH = params.synchronisation_history_length
 
     # Initialize random force lattice
     forces, phase_vectors = initialise(params)
@@ -130,20 +132,24 @@ def run_simulation(params, vis_force=None, vis_phase=None):
         if vis_phase is not None and displayed_domain is not None:
             vis_phase.update(forces, displayed_domain)
 
-        # If the domain is suitable store it for tracking and visualisation
+        # If the domain is suitable store it for tracking
         should_track = (len(domains) < TRACKED_DOMAINS and 
-                           len(toppled_sites) > MIN_DOMAIN_SIZE and 
+                           MIN_DOMAIN_SIZE < len(toppled_sites) < MAX_DOMAIN_SIZE and 
                            n > BEGIN_TRACKING)
         if should_track:
             domain = TrackedDomain(toppled_sites, phase_vectors)
             domains.append(domain)
-            displayed_domain = toppled_sites
+            # Only visualise the first tracked domain
+            if displayed_domain is None:
+                displayed_domain = toppled_sites
 
         # ------------------------------------------------
         # Update tracked domains and entire lattice domain
         # ------------------------------------------------
         for tracked_domain in domains:
-            tracked_domain.update(phase_vectors)
+            # Only track domain synchronisation over a certain number of avalanches (saves time)
+            if len(tracked_domain.history) < SYNCHRONISATION_HISTORY_LENGTH:
+                tracked_domain.update(phase_vectors)
 
         lattice.update(phase_vectors)
 

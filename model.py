@@ -38,6 +38,10 @@ class Parameters:
         Number of domains to be tracked.
     min_domain_size : int
         Minimum suitable size (no. of sites) for a domain to be tracked.
+    max_domain_size : int
+        Maximum suitable size (no. of sites) for a domain to be tracked.
+    synchronisation_history_length : int
+        Length of domain synchronisation histories to be recorded.
 
     Properties
     -------
@@ -57,8 +61,11 @@ class Parameters:
         # Simulation parameters
         self.iterations = 100000
         self.begin_data = 40000
-        self.tracked_domain_no = 1
-        self.min_domain_size = 100
+        self.tracked_domain_no = 2000
+        self.min_domain_size = 10
+        self.max_domain_size = 20
+        self.synchronisation_history_length = 3000
+
 
     @property
     def a(self):

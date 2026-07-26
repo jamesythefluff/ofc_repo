@@ -106,3 +106,16 @@ def fit_power_law(sizes):
     r_squared = fit.rvalue**2
 
     return gradient, intercept, r_squared
+
+# -------------------------------------------------
+# NORMALISED AVERAGE SYNCHRONICITY TIME SERIES
+# -------------------------------------------------
+def average_domain_synchronicity(domains, params):
+    SYNCHRONISATION_HISTORY_LENGTH = params.synchronisation_history_length
+    total_synchronisation_history = np.zeros(SYNCHRONISATION_HISTORY_LENGTH)
+    for domain in domains:
+        history = domain.history
+        normalised_history = history #/ history[0]
+        total_synchronisation_history += normalised_history
+    average_synchronisation_history = total_synchronisation_history / len(domains)
+    return average_synchronisation_history

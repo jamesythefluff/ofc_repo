@@ -28,7 +28,7 @@ import matplotlib.pyplot as plt
 # -------------------------------------------------
 from model import Parameters
 from simulation import initialise, run_simulation
-from plotting import plot_time_series, plot_sizes, plot_power_law_fit, plot_domain_R, plot_lattice_R
+from plotting import *
 from visualiser import ForceVisualiser, PhaseVisualiser
 
 # -------------------------------------------------
@@ -82,5 +82,6 @@ sizes, domains, lattice = run_simulation(params, vis_force=vis_force, vis_phase=
 # POST-SIMULATION ANALYSIS
 # -------------------------------------------------
 plot_lattice_R(lattice)
-plot_domain_R(domains)
+#plot_domain_R(domains)
 plot_power_law_fit(sizes)
+plot_average_synchronisation_history(domains, params)
