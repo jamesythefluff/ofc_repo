@@ -125,13 +125,37 @@ def fit_power_law(sizes):
 def average_domain_synchronicity(domains, params):
     SYNCHRONISATION_HISTORY_LENGTH = params.synchronisation_history_length
     total_synchronisation_history = np.zeros(SYNCHRONISATION_HISTORY_LENGTH)
+
+    # INTERPOLATION
+    total_load_arr = []
+    for domain in domains:
+        total_load = domain.load_history[-1] - domain.load_history[0]
+        total_load_arr.append(total_load)
+    max_load = np.max(total_load_arr)
+    common_load = np.linspace(0, max_load, 500)
+
+    interpolated_domains = []
+
     for domain in domains:
         history = domain.history
-        normalised_history = history #/ history[0]
-        total_synchronisation_history += normalised_history
-    average_synchronisation_history = total_synchronisation_history / len(domains)
-    time = np.arange(SYNCHRONISATION_HISTORY_LENGTH)
-    return average_synchronisation_history, time
+        relative_load = (domain.load_history - domain.load_history[0])
+        R_interp = np.interp(
+            common_load,
+            relative_load,
+            domain.history,
+            left=np.nan,
+            right=np.nan
+        )
+        interpolated_domains.append(R_interp)
+
+    all_R = np.vstack(interpolated_domains)
+    mean_R = np.nanmean(all_R, axis=0)
+
+    # CUT OFF LAST 50 UNDERSAMPLED DATA POINTS
+    mean_R = mean_R[:-50]
+    common_load = common_load[:-50]
+
+    return mean_R, common_load
 
 # -------------------------------------------------
 # EXPONENTIAL FIT TO DESYNCHRONICITY CURVE
@@ -144,7 +168,7 @@ def fit_exponential(mean_R, time):
 
     # Initial guesses
     A0 = np.max(mean_R_fit) - np.min(mean_R_fit)
-    tau0 = len(time_fit) / 10
+    tau0 = len(time_fit) / 3
     C0 = np.min(mean_R_fit)
 
     popt, pcov = curve_fit(

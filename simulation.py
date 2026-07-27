@@ -44,6 +44,7 @@ class TrackedDomain:
         self.size = len(coords)
         self.compute_R(phase_vectors)
         self.history = []
+        self.load_history = []
 
     def compute_R(self, phase_vectors):
         phase_vectors = np.array(phase_vectors)
@@ -51,9 +52,10 @@ class TrackedDomain:
         for i,j in self.coords:
             self.R += phase_vectors[i, j]
 
-    def update(self, phase_vectors):
+    def update(self, phase_vectors, cumulative_loading_force):
         self.compute_R(phase_vectors)
         self.history.append(np.abs(self.R) / self.size)
+        self.load_history.append(cumulative_loading_force)
         
 
 def initialise(params):
@@ -80,6 +82,8 @@ def run_simulation(params, vis_force=None, vis_phase=None):
 
     Returns
     -------
+    cumulative_load : list
+        Cumulative loading force applied to each site.
     sizes : list
         Time series of avalanche sizes.
     domains : list[TrackedDomain]
@@ -114,6 +118,8 @@ def run_simulation(params, vis_force=None, vis_phase=None):
     # Domain for unit circle order parameter visualiser
     displayed_domain = None
 
+    cumulative_loading_force = 0
+
     # -------------------------------------------------
     # RUN SIMULATION
     # -------------------------------------------------
@@ -122,7 +128,7 @@ def run_simulation(params, vis_force=None, vis_phase=None):
         # -------------------------------------------------
         # Drive the lattice and generate an avalanche
         # -------------------------------------------------
-        forces, seed_site = drive(forces, params)
+        cumulative_loading_force, forces, seed_site = drive(cumulative_loading_force, forces, params)
         forces, phase_vectors, toppled_sites, topplings = avalanche(forces, seed_site, params, vis_force, vis_phase)
 
         # Update time series
@@ -149,9 +155,9 @@ def run_simulation(params, vis_force=None, vis_phase=None):
         for tracked_domain in domains:
             # Only track domain synchronisation over a certain number of avalanches (saves time)
             if len(tracked_domain.history) < SYNCHRONISATION_HISTORY_LENGTH:
-                tracked_domain.update(phase_vectors)
+                tracked_domain.update(phase_vectors, cumulative_loading_force)
 
-        lattice.update(phase_vectors)
+        lattice.update(phase_vectors, cumulative_loading_force)
 
         # ------------------------------------------------
         # Progress

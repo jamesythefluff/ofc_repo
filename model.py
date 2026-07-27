@@ -56,7 +56,7 @@ class Parameters:
         # Model parameters
         self.L = 32
         self.Fth = 1.0
-        self.K = 2.0
+        self.K = 0.5
         self.KL = 1.0
         # Simulation parameters
         self.iterations = 200000
@@ -81,7 +81,7 @@ class Parameters:
             
 
 
-def drive(forces, params):
+def drive(cumulative_loading_force, forces, params):
     """
     Drives the lattice by globally increasing the force on all sites such that the most stressed site reached threshold.
 
@@ -101,9 +101,12 @@ def drive(forces, params):
     Fadd = Fth - Fmax
 
     # Drive all sites except the padded boundaries
-    forces[1:-1, 1:-1] += Fadd 
+    forces[1:-1, 1:-1] += Fadd
 
-    return forces, initial_site
+    # Update cumulative loading force
+    cumulative_loading_force += Fadd
+
+    return cumulative_loading_force, forces, initial_site
 
 
 

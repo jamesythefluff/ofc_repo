@@ -232,6 +232,6 @@ def plot_desynchronisation(domains, params):
 
     finish_plot(
             f"Average Synchronisation Time Series α = {a}",
-            "Time",
+            "Cumulative Load",
             f"Synchronisation Averaged over {len(domains)} Domains"
             )

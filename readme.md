@@ -170,9 +170,9 @@ These can be analysed using the plotting functions in `analysis.py`.
 Potential future developments include
 
 * reducing force threshold rather than driving up all sites for improved prerformance
+* incremental updates of phase vectors for improved performance
 * extending time series analysis to check agreement with the Gutenberg-Richter law
 * implementing test of Omori's law
-* incremental updates of phase vectors for improved performance
 * further synchronisation analysis
 * vectorised avalanche propagation, JIT compilation with numba, GPU version (CuPy)
 
