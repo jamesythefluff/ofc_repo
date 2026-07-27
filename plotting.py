@@ -235,3 +235,15 @@ def plot_desynchronisation(domains, params):
             "Cumulative Load",
             f"Synchronisation Averaged over {len(domains)} Domains"
             )
+
+def plot_desynchronisation_time(Ks, taus):
+
+    plt.figure()
+    plt.scatter(Ks, taus, label = 'Data')
+    plt.legend()
+
+    finish_plot(
+            f"Desync Time τ vs NN Coupling K",
+            "Nearest Neighbour Coupling Constant K",
+            f"Avg. Desynchronisation Time"
+            )

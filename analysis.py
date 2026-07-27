@@ -151,9 +151,9 @@ def average_domain_synchronicity(domains, params):
     all_R = np.vstack(interpolated_domains)
     mean_R = np.nanmean(all_R, axis=0)
 
-    # CUT OFF LAST 50 UNDERSAMPLED DATA POINTS
-    mean_R = mean_R[:-50]
-    common_load = common_load[:-50]
+    # CUT OFF LAST 100 UNDERSAMPLED DATA POINTS
+    mean_R = mean_R[:-100]
+    common_load = common_load[:-100]
 
     return mean_R, common_load
 
@@ -168,7 +168,7 @@ def fit_exponential(mean_R, time):
 
     # Initial guesses
     A0 = np.max(mean_R_fit) - np.min(mean_R_fit)
-    tau0 = len(time_fit) / 3
+    tau0 = len(time_fit) / 4
     C0 = np.min(mean_R_fit)
 
     popt, pcov = curve_fit(

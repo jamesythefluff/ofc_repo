@@ -53,18 +53,25 @@ class Parameters:
         Fraction of force transferred to each neighbour during a topple for corner sites. (Currently not used in the model)
     """
     def __init__(self):
+
         # Model parameters
         self.L = 32
         self.Fth = 1.0
-        self.K = 0.5
+        self.K = 1.0
         self.KL = 1.0
         # Simulation parameters
-        self.iterations = 200000
+
+        self.iterations = 100000
         self.begin_data = 40000
-        self.tracked_domain_no = 1000
+        self.tracked_domain_no = 100
         self.min_domain_size = 10
-        self.max_domain_size = 20
+        self.max_domain_size = 11
         self.synchronisation_history_length = 3000
+
+        # Sweep parameters
+        self.K_min = 0.5
+        self.K_max = 4
+        self.sweeps = 30
 
 
     @property

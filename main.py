@@ -27,7 +27,7 @@ import matplotlib.pyplot as plt
 # IMPORT MODULES
 # -------------------------------------------------
 from model import Parameters
-from simulation import initialise, run_simulation
+from simulation import initialise, run_simulation, parameter_sweep
 from plotting import *
 from visualiser import ForceVisualiser, PhaseVisualiser
 
@@ -76,12 +76,14 @@ vis_phase = None # PhaseVisualiser(ax)
 #   domains : tracked synchronisation domains
 #   lattice : synchronisation history of the entire lattice
 
-sizes, domains, lattice = run_simulation(params, vis_force=vis_force, vis_phase=vis_phase)
+#sizes, domains, lattice = run_simulation(params, vis_force=vis_force, vis_phase=vis_phase)
+Ks, taus = parameter_sweep(params, vis_force=vis_force, vis_phase=vis_phase)
 
 # -------------------------------------------------
 # POST-SIMULATION ANALYSIS
 # -------------------------------------------------
-plot_lattice_R(lattice)
+#plot_lattice_R(lattice)
 #plot_domain_R(domains)
-plot_power_law_fit(sizes)
-plot_desynchronisation(domains, params)
+#plot_power_law_fit(sizes)
+#plot_desynchronisation(domains, params)
+plot_desynchronisation_time(Ks, taus)

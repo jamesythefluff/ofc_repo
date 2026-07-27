@@ -13,8 +13,13 @@ Date: July 2026
 # Import libraries
 # -------------------------------------
 import numpy as np
-from model import drive
-from model import avalanche
+
+# -------------------------------------
+# Import modules
+# -------------------------------------
+from model import drive, avalanche
+from analysis import average_domain_synchronicity, fit_exponential
+
 
 class TrackedDomain:
     """
@@ -140,7 +145,7 @@ def run_simulation(params, vis_force=None, vis_phase=None):
 
         # If the domain is suitable store it for tracking
         should_track = (len(domains) < TRACKED_DOMAINS and 
-                           MIN_DOMAIN_SIZE < len(toppled_sites) < MAX_DOMAIN_SIZE and 
+                           MIN_DOMAIN_SIZE <= len(toppled_sites) < MAX_DOMAIN_SIZE and 
                            n > BEGIN_TRACKING)
         if should_track:
             domain = TrackedDomain(toppled_sites, phase_vectors)
@@ -173,3 +178,32 @@ def run_simulation(params, vis_force=None, vis_phase=None):
     print("Mean earthquake size =", np.mean(sizes))
 
     return sizes, domains, lattice
+
+
+def parameter_sweep(params, vis_force=None, vis_phase=None):
+
+    K_min = params.K_min
+    K_max = params.K_max
+    sweeps = params.sweeps
+
+    K_arr = np.linspace(K_min, K_max, sweeps)
+
+    Ks = []
+    taus = []
+
+    for K in K_arr:
+
+        params.K = K
+
+        sizes, domains, lattice = run_simulation(params, vis_force=None, vis_phase=None)
+
+        mean_R, time = average_domain_synchronicity(domains, params)
+        
+        time_fit, mean_R_fit, popt = fit_exponential(mean_R, time)
+        A, tau, C = popt
+
+        Ks.append(K)
+        taus.append(tau)
+
+    return Ks, taus
+
