@@ -19,71 +19,74 @@ Author: Anne-Marie
 Date: July 2026
 """
 # -------------------------------------------------
-# IMPORT LIBRARIES
-# -------------------------------------------------
-import matplotlib.pyplot as plt
-
-# -------------------------------------------------
 # IMPORT MODULES
 # -------------------------------------------------
 from model import Parameters
-from simulation import initialise, run_simulation, parameter_sweep
-from plotting import *
-from visualiser import ForceVisualiser, PhaseVisualiser
+from simulation import run_simulation 
+from plotting import (
+    plot_average_synchronisation,
+    plot_lattice_synchronisation,
+    plot_power_law_fit,
+)
+from visualiser import ( 
+    create_force_visualiser, 
+    create_phase_visualiser
+)
+from experiments import alpha_sweep
 
-# -------------------------------------------------
-# SIMULATION PARAMETERS
-# -------------------------------------------------
-params = Parameters()
 
-# -------------------------------------------------
-# FORCE LATTICE VISUALISATION
-# -------------------------------------------------
-"""# Visulatisation
-F = initialise(params)
-plt.ion()  # interactive mode
-fig, ax = plt.subplots()
-im = ax.imshow(F, cmap='gray', origin='lower', vmin=0, vmax=1)
-plt.colorbar(im, label='Force')
-ax.set_xlabel('x')
-ax.set_ylabel('y')
-plt.show()"""
+def main():
+    """
+    Configures and executes the OFC simulation workflow.
 
-vis_force = None # ForceVisualiser(im)
+    Depending on the configuration flags, either performs an
+    alpha parameter sweep or runs a single simulation with live
+    visualisation and post-processing analysis.
+    """
+    # -------------------------------------------------
+    # CONFIGURATION
+    # -------------------------------------------------
+    ALPHA = 0.245
 
-# -------------------------------------------------
-# PHASE-CIRCLE SYNCHRONISATION VISUALISATION
-# -------------------------------------------------
-"""plt.ion()
-fig, ax = plt.subplots(figsize=(6,6))
-# Draw unit circle
-theta = np.linspace(0, 2*np.pi, 300)
-ax.plot(np.cos(theta), np.sin(theta), 'k--')
-ax.set_aspect('equal')
-ax.set_xlim(-1.2, 1.2)
-ax.set_ylim(-1.2, 1.2)
-fig.canvas.draw()
-fig.canvas.flush_events()
-plt.pause(0.001)"""
+    ENABLE_PHASE_VISUALISATION = False
+    ENABLE_FORCE_VISUALISATION = False
+    RUN_ALPHA_SWEEP = True
 
-vis_phase = None # PhaseVisualiser(ax)
+    params = Parameters()
+    params.alpha = ALPHA
 
-# -------------------------------------------------
-# RUN SIMULATION
-# -------------------------------------------------
-# Returns:
-#   sizes   : avalanche size time series
-#   domains : tracked synchronisation domains
-#   lattice : synchronisation history of the entire lattice
+    # -------------------------------------------------
+    # RUN EXPERIMENT OR SIMULATION
+    # -------------------------------------------------
+    if RUN_ALPHA_SWEEP:
+        alpha_sweep(params)
+        return
 
-#sizes, domains, lattice = run_simulation(params, vis_force=vis_force, vis_phase=vis_phase)
-Ks, taus = parameter_sweep(params, vis_force=vis_force, vis_phase=vis_phase)
+    # -------------------------------------------------
+    # INITIALISE VISUALISERS
+    # -------------------------------------------------
+    if ENABLE_FORCE_VISUALISATION:
+        vis_force = create_force_visualiser(params)
+    else:
+        vis_force = None  # Pass None to run_simulation().
 
-# -------------------------------------------------
-# POST-SIMULATION ANALYSIS
-# -------------------------------------------------
-#plot_lattice_R(lattice)
-#plot_domain_R(domains)
-#plot_power_law_fit(sizes)
-#plot_desynchronisation(domains, params)
-plot_desynchronisation_time(Ks, taus)
+    if ENABLE_PHASE_VISUALISATION:
+        vis_phase = create_phase_visualiser()
+    else:
+        vis_phase = None  # Pass None to run_simulation().
+
+    # -------------------------------------------------
+    # RUN SIMULATION
+    # -------------------------------------------------
+    sizes, domains, lattice = run_simulation(params, vis_force=vis_force, vis_phase=vis_phase)
+
+    # -------------------------------------------------
+    # POST-SIMULATION PLOTS
+    # -------------------------------------------------
+    plot_lattice_synchronisation(lattice)
+    plot_power_law_fit(sizes)
+    plot_average_synchronisation(domains, params)
+
+
+if __name__ == "__main__":
+    main()

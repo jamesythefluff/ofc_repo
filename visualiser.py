@@ -28,6 +28,46 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # -------------------------------------------------
+# IMPORT MODULES
+# -------------------------------------------------
+from simulation import initialise
+
+
+def create_phase_visualiser():
+
+    plt.ion()
+    fig, ax = plt.subplots(figsize=(6,6))
+    # Draw unit circle
+    theta = np.linspace(0, 2*np.pi, 300)
+    ax.plot(np.cos(theta), np.sin(theta), 'k--')
+    ax.set_aspect('equal')
+    ax.set_xlim(-1.2, 1.2)
+    ax.set_ylim(-1.2, 1.2)
+    fig.canvas.draw()
+    fig.canvas.flush_events()
+    plt.pause(0.001)
+
+    vis_phase = PhaseVisualiser(ax)
+    
+    return vis_phase
+
+
+def create_force_visualiser(params):
+
+    forces, phase_vetors = initialise(params)
+    plt.ion()  # interactive mode
+    fig, ax = plt.subplots()
+    im = ax.imshow(forces, cmap='gray', origin='lower', vmin=0, vmax=1)
+    plt.colorbar(im, label='Force')
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    plt.show()
+
+    vis_force = ForceVisualiser(im)
+
+    return vis_force
+
+# -------------------------------------------------
 # FORCE LATTICE VISUALISER
 # -------------------------------------------------
 class ForceVisualiser:

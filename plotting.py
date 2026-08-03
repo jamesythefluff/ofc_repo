@@ -38,6 +38,7 @@ def finish_plot(title, xlabel, ylabel):
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.grid(True, which="both", alpha=0.3)
+    plt.savefig("alpha_sweep.png", dpi=300)
     plt.show(block=True)
 
 # -------------------------------------------------
@@ -166,7 +167,7 @@ def plot_power_law_fit(sizes):
 # -------------------------------------------------
 # Plot lattice synchronisation
 # -------------------------------------------------
-def plot_lattice_R(lattice):
+def plot_lattice_synchronisation(lattice):
     """
     Plots the synchronisation history of the entire lattice.
 
@@ -193,7 +194,7 @@ def plot_lattice_R(lattice):
 # -------------------------------------------------
 # Plot domain synchronisation
 # -------------------------------------------------
-def plot_domain_R(domains):
+def plot_domain_synchronisation(domains):
     """
     Plots the synchronisation histories of all tracked domains.
 
@@ -216,34 +217,34 @@ def plot_domain_R(domains):
         "Normalised Magnitude of R"
         )
 
-def plot_desynchronisation(domains, params):
+def plot_average_synchronisation(domains, params):
     
     mean_R, time = average_domain_synchronicity(domains, params)
 
-    time_fit, mean_R_fit, popt = fit_exponential(mean_R, time)
+    time_fit, mean_R_fit, popt, tau_err = fit_exponential(mean_R, time)
     A, tau, C = popt
 
-    a = params.a
+    alpha = params.alpha
 
     plt.figure()
     plt.scatter(time, mean_R, label = 'Data')
-    plt.plot(time_fit, mean_R_fit, label = f'Exponential fit τ = {tau}')
+    plt.plot(time_fit, mean_R_fit, label = f'Exponential fit τ = {tau:.3f} +/- {tau_err:.3f}')
     plt.legend()
 
     finish_plot(
-            f"Average Synchronisation Time Series α = {a}",
+            f"Average Synchronisation Time Series α = {alpha}",
             "Cumulative Load",
             f"Synchronisation Averaged over {len(domains)} Domains"
             )
 
-def plot_desynchronisation_time(Ks, taus):
+def plot_desynchronisation_time(alphas, taus, tau_errs, params):
 
     plt.figure()
-    plt.scatter(Ks, taus, label = 'Data')
+    plt.errorbar(alphas, taus, yerr = tau_errs, fmt = '.', label = 'Data')
     plt.legend()
 
     finish_plot(
-            f"Desync Time τ vs NN Coupling K",
-            "Nearest Neighbour Coupling Constant K",
+            f"Desync Time τ vs Energy Transfer α",
+            "Energy Transfer Constant α",
             f"Avg. Desynchronisation Time"
             )

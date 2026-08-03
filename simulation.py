@@ -1,9 +1,10 @@
 """
 simulation.py
 
-Runs the OFC simulation by repeatedly driving the lattice,
-generating avalanches, updating tracked domains, and recording
-synchronisation statistics.
+Provides the high-level routines required to run a single
+OFC simulation. The module initialises the lattice,
+tracks the synchronisation of selected earthquake domains,
+and records simulation data for subsequent analysis.
 
 Author: Anne-Marie
 Date: July 2026
@@ -18,48 +19,95 @@ import numpy as np
 # Import modules
 # -------------------------------------
 from model import drive, avalanche
-from analysis import average_domain_synchronicity, fit_exponential
 
 
 class TrackedDomain:
     """
-    Represents a collection of lattice sites whose synchronisation
-    is tracked throughout the simulation.
+    Represents a domain of lattice sites whose synchronisation
+    is monitored after an earthquake.
+
+    Each tracked domain stores its constituent lattice sites,
+    its normalised synchronisation, and the evolution of its
+    synchronisation as the lattice is subsequently
+    driven.
 
     Attributes
     ----------
     coords : list[(int, int)]
         Coordinates belonging to the domain.
+
     size : int
         Number of sites in the domain.
-    R : complex
-        Complex Kuramoto order parameter.
+
+    synchronisation : float
+        Normalised synchronisation parameter.
+
     history : list[float]
         Time series of |R|/N.
 
+    load_history : list[float]
+        Cumulative loading force corresponding to each recorded
+        synchronisation value.
+
     Methods
     -------
-    compute_R(phase_vectors)
-        Computes the Kuramoto order parameter for the domain.
+    compute_synchronisation(phase_vectors)
+        Computes the synchronisation for the domain.
+
     update(phase_vectors)
-        Updates the Kuramoto order parameter and appends its normalised magnitude to the history.
+        Updates the synchronisation and appends it to the history.
     """
     def __init__(self, coords, phase_vectors):
         self.coords = coords
         self.size = len(coords)
-        self.compute_R(phase_vectors)
-        self.history = []
+        self.compute_synchronisation(phase_vectors)
+        self.synchronisation_history = []
         self.load_history = []
 
-    def compute_R(self, phase_vectors):
-        phase_vectors = np.array(phase_vectors)
-        self.R = 0j
+    def compute_synchronisation(self, phase_vectors):
+        """
+        Computes the synchronisation for the domain.
+
+        Parameters
+        ----------
+        phase_vectors : np.ndarray
+            Complex phase vector associated with every lattice
+            site.
+
+        Notes
+        -----
+        The synchronisation is the absolute value of the
+        vector sum of the phase vectors belonging to the tracked 
+        domain, normalised by the domain size.
+        """
+        vector_sum = 0j
+
         for i,j in self.coords:
-            self.R += phase_vectors[i, j]
+            vector_sum += phase_vectors[i, j]
+
+        # Take absolute value and normalise by domain size
+        self.synchronisation = abs(vector_sum) / self.size
 
     def update(self, phase_vectors, cumulative_loading_force):
-        self.compute_R(phase_vectors)
-        self.history.append(np.abs(self.R) / self.size)
+        """
+        Updates the synchronisation history of the domain.
+
+        Parameters
+        ----------
+        phase_vectors : np.ndarray
+            Complex phase vectors for the current lattice state.
+
+        cumulative_loading_force : float
+            Total loading force applied to the lattice since the
+            start of the simulation.
+
+        Notes
+        -----
+        Computes and stores the current synchronisation together 
+        with the corresponding cumulative loading force.
+        """
+        self.compute_synchronisation(phase_vectors)
+        self.synchronisation_history.append(self.synchronisation)
         self.load_history.append(cumulative_loading_force)
         
 
@@ -67,32 +115,64 @@ def initialise(params):
     """
     Initialises an L by L lattice with padded boundaries.
 
+    The lattice is padded with a one-site border of zeros.
+    This simplifies neighbour indexing by avoiding explicit
+    boundary checks when constructing neighbour coordinates.
+
+    Parameters
+    ----------
+    params : Parameters
+        Simulation parameters containing the lattice size.
+
     Returns
     -------
     forces : np.ndarray
         Randomly initialised force lattice with padded boundaries.
+
     phase_vectors : np.ndarray
         Complex phase vectors for each lattice site.
     """
     L = params.L
     forces = np.zeros((L+2,L+2)) # Padded grid to avoid boundary checks
-    forces[1:-1, 1:-1] = np.random.rand(L, L)
+
+    # Populate the lattice with random forces in the range [0,1)
+    # Exclude the padded boundaries which remain at zero
+    forces[1:-1, 1:-1] = np.random.rand(L, L) 
+
     phase_vectors = np.exp(2j*np.pi*forces)
+
     return forces, phase_vectors
 
 
 def run_simulation(params, vis_force=None, vis_phase=None):
     """
-    Runs the OFC simulation.
+    Runs a single OFC simulation by repeatedly driving the
+    lattice, propagating avalanches, recording earthquake
+    sizes, and tracking the synchronisation of selected
+    domains.
+
+    Parameters
+    ----------
+    params : Parameters
+        Model and simulation parameters.
+
+    vis_force : ForceVisualiser, optional
+        Interactive force lattice visualiser.
+
+    vis_phase : PhaseVisualiser, optional
+        Interactive phase vector visualiser.
 
     Returns
     -------
     cumulative_load : list
         Cumulative loading force applied to each site.
+
     sizes : list
         Time series of avalanche sizes.
+
     domains : list[TrackedDomain]
         Tracked domains.
+
     lattice : TrackedDomain
         Entire lattice domain.
     """
@@ -149,17 +229,18 @@ def run_simulation(params, vis_force=None, vis_phase=None):
                            n > BEGIN_TRACKING)
         if should_track:
             domain = TrackedDomain(toppled_sites, phase_vectors)
+            domain.update(phase_vectors, cumulative_loading_force)
             domains.append(domain)
-            # Only visualise the first tracked domain
-            if displayed_domain is None:
-                displayed_domain = toppled_sites
+            # Visualise only the first tracked domain
+            displayed_domain = displayed_domain or toppled_sites
 
         # ------------------------------------------------
         # Update tracked domains and entire lattice domain
         # ------------------------------------------------
         for tracked_domain in domains:
-            # Only track domain synchronisation over a certain number of avalanches (saves time)
-            if len(tracked_domain.history) < SYNCHRONISATION_HISTORY_LENGTH:
+            # Limit the recorded synchronisation history to reduce
+            # memory usage and computation time.
+            if len(tracked_domain.synchronisation_history) < SYNCHRONISATION_HISTORY_LENGTH:
                 tracked_domain.update(phase_vectors, cumulative_loading_force)
 
         lattice.update(phase_vectors, cumulative_loading_force)
@@ -178,32 +259,3 @@ def run_simulation(params, vis_force=None, vis_phase=None):
     print("Mean earthquake size =", np.mean(sizes))
 
     return sizes, domains, lattice
-
-
-def parameter_sweep(params, vis_force=None, vis_phase=None):
-
-    K_min = params.K_min
-    K_max = params.K_max
-    sweeps = params.sweeps
-
-    K_arr = np.linspace(K_min, K_max, sweeps)
-
-    Ks = []
-    taus = []
-
-    for K in K_arr:
-
-        params.K = K
-
-        sizes, domains, lattice = run_simulation(params, vis_force=None, vis_phase=None)
-
-        mean_R, time = average_domain_synchronicity(domains, params)
-        
-        time_fit, mean_R_fit, popt = fit_exponential(mean_R, time)
-        A, tau, C = popt
-
-        Ks.append(K)
-        taus.append(tau)
-
-    return Ks, taus
-

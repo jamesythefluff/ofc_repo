@@ -168,8 +168,10 @@ def fit_exponential(mean_R, time):
 
     # Initial guesses
     A0 = np.max(mean_R_fit) - np.min(mean_R_fit)
-    tau0 = len(time_fit) / 4
     C0 = np.min(mean_R_fit)
+    target = C0 + A0/np.e
+    idx = np.argmin(np.abs(mean_R_fit - target))
+    tau0 = time_fit[idx]
 
     popt, pcov = curve_fit(
         exponential,
@@ -179,8 +181,9 @@ def fit_exponential(mean_R, time):
     )
 
     A, tau, C = popt
-    print(f'A = {A}, τ = {tau}, C = {C}')
+    tau_err = np.sqrt(pcov[1,1])
+    print(f'τ = {tau:.3f} +/- {tau_err:.3f}')
 
     fitted_R = exponential(time_fit, A, tau, C)
 
-    return time_fit, fitted_R, popt
+    return time_fit, fitted_R, popt, tau_err
