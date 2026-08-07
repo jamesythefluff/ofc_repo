@@ -116,6 +116,13 @@ class Parameters:
         self.num_alpha_values = 20
         self.runs_per_alpha = 10
 
+        # Analysis parameters
+        self.num_interpolation_points = 500
+        self.tail_cutoff = 100
+
+        # Plotting parameters
+        self.plot_sample = 1000
+
     @property
     def alpha(self):
         """

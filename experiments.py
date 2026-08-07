@@ -24,7 +24,7 @@ import numpy as np
 # -------------------------------------
 from simulation import run_simulation
 from analysis import average_domain_synchronicity, fit_exponential
-from plotting import *
+from plotting import plot_desynchronisation_load
 
 # -------------------------------------
 # Internal helper functions
@@ -190,6 +190,6 @@ def alpha_sweep(params):
     # -------------------------------------
     _save_results(alphas, tau_means, tau_sems, params)
 
-    plot_desynchronisation_time(alphas, tau_means, tau_sems, params)
+    plot_desynchronisation_load(alphas, tau_means, tau_sems, params)
 
     return alphas, tau_means, tau_sems

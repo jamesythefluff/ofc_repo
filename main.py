@@ -22,19 +22,23 @@ Date: July 2026
 # IMPORT MODULES
 # -------------------------------------------------
 from model import Parameters
-from simulation import run_simulation 
+from simulation import initialise, run_simulation 
 from plotting import (
     plot_average_synchronisation,
     plot_lattice_synchronisation,
     plot_power_law_fit,
 )
 from visualiser import ( 
+    ForceVisualiser,
+    PhaseVisualiser,
     create_force_visualiser, 
     create_phase_visualiser
 )
 from experiments import alpha_sweep
 
-
+# -------------------------------------------------
+# MAIN
+# -------------------------------------------------
 def main():
     """
     Configures and executes the OFC simulation workflow.
@@ -47,7 +51,6 @@ def main():
     # CONFIGURATION
     # -------------------------------------------------
     ALPHA = 0.245
-
     ENABLE_PHASE_VISUALISATION = False
     ENABLE_FORCE_VISUALISATION = False
     RUN_ALPHA_SWEEP = True
@@ -66,14 +69,15 @@ def main():
     # INITIALISE VISUALISERS
     # -------------------------------------------------
     if ENABLE_FORCE_VISUALISATION:
-        vis_force = create_force_visualiser(params)
+        forces, phase_vectors = initialise(params)
+        vis_force = ForceVisualiser.create(forces)
     else:
-        vis_force = None  # Pass None to run_simulation().
+        vis_force = None
 
     if ENABLE_PHASE_VISUALISATION:
-        vis_phase = create_phase_visualiser()
+        vis_phase = PhaseVisualiser.create()
     else:
-        vis_phase = None  # Pass None to run_simulation().
+        vis_phase = None
 
     # -------------------------------------------------
     # RUN SIMULATION
