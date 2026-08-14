@@ -97,7 +97,7 @@ class Parameters:
     def __init__(self):
 
         # Model parameters
-        self.L = 32
+        self.L = 16
         self.Fth = 1.0
         self.K = 1.0
         self.KL = 1.0
@@ -110,11 +110,22 @@ class Parameters:
         self.max_domain_size = 20
         self.synchronisation_history_length = 10000
 
-        # Experiment parameters
+        # EXPERIMENT PARAMETERS
+
+        self.sweep_type = None  # Will be set in the sweep functions
+
+        # Alpha sweep
         self.alpha_min = 0.15
-        self.alpha_max = 0.24
-        self.num_alpha_values = 20
-        self.runs_per_alpha = 10
+        self.alpha_max = 0.23
+        self.num_alpha_values = 5
+        self.runs_per_alpha = 3
+        self.tau_upper_bound = 1000
+
+        # Lattice sweep
+        self.L_values = [16, 24, 32, 40, 48, 56, 64]
+        self.runs_per_L = 3
+        self.num_L_values = 4
+        self.L_exponent_min = 4
 
         # Analysis parameters
         self.num_interpolation_points = 500
@@ -122,6 +133,25 @@ class Parameters:
 
         # Plotting parameters
         self.plot_sample = 1000
+
+    @property
+    def sweep_values(self):
+        if self.sweep_type == "alpha":
+            return np.linspace(
+                self.alpha_min,
+                self.alpha_max,
+                self.num_alpha_values
+            )
+
+        elif self.sweep_type == "L":
+            if self.L_values is not None:
+                return np.array(self.L_values)
+            
+            exponents = np.arange(
+                self.L_exponent_min,
+                self.L_exponent_min + self.num_L_values
+            )
+            return 2 ** exponents
 
     @property
     def alpha(self):

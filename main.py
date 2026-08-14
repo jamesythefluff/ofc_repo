@@ -31,10 +31,8 @@ from plotting import (
 from visualiser import ( 
     ForceVisualiser,
     PhaseVisualiser,
-    create_force_visualiser, 
-    create_phase_visualiser
 )
-from experiments import alpha_sweep
+from experiments import alpha_sweep, L_sweep
 
 # -------------------------------------------------
 # MAIN
@@ -50,10 +48,11 @@ def main():
     # -------------------------------------------------
     # CONFIGURATION
     # -------------------------------------------------
-    ALPHA = 0.245
+    ALPHA = 0.2
     ENABLE_PHASE_VISUALISATION = False
     ENABLE_FORCE_VISUALISATION = False
     RUN_ALPHA_SWEEP = True
+    RUN_L_SWEEP = False
 
     params = Parameters()
     params.alpha = ALPHA
@@ -63,6 +62,10 @@ def main():
     # -------------------------------------------------
     if RUN_ALPHA_SWEEP:
         alpha_sweep(params)
+        return
+
+    if RUN_L_SWEEP:
+        L_sweep(params)
         return
 
     # -------------------------------------------------
@@ -87,8 +90,7 @@ def main():
     # -------------------------------------------------
     # POST-SIMULATION PLOTS
     # -------------------------------------------------
-    plot_lattice_synchronisation(lattice)
-    plot_power_law_fit(sizes)
+    plot_lattice_synchronisation(lattice, params)
     plot_average_synchronisation(domains, params)
 
 

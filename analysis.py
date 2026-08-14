@@ -196,12 +196,12 @@ def average_domain_synchronisation(domains, params):
     interpolated_domains = []
 
     for domain in domains:
-        history = domain.history
+        history = domain.synchronisation_history
         relative_load = (domain.load_history - domain.load_history[0])
         R_interp = np.interp(
             common_load, 
             relative_load, 
-            domain.history, 
+            history, 
             left=np.nan, 
             right=np.nan
         )
@@ -223,7 +223,7 @@ def average_domain_synchronisation(domains, params):
 # -------------------------------------------------
 # EXPONENTIAL FIT TO SYNCHRONISATION CURVE
 # -------------------------------------------------
-def fit_exponential(mean_synchronisation, accumulated_load):
+def fit_exponential(cumulative_load, mean_synchronisation):
     """
     Fits an exponential decay to the average synchronisation curve.
 
@@ -242,19 +242,19 @@ def fit_exponential(mean_synchronisation, accumulated_load):
 
     Parameters
     ----------
+    cumulative_load : np.ndarray
+        Cumulative load corresponding to ``mean_synchronisation``.
+
     mean_synchronisation : np.ndarray
         Average synchronisation order parameter.
 
-    accumulated_load : np.ndarray
-        Accumulated load corresponding to ``mean_synchronisation``.
-
     Returns
     -------
-    accumulated_load_fit : np.ndarray
-        Portion of the accumulated load axis used for the fit.
+    cumulative_load_fit : np.ndarray
+        Portion of the cumulative load axis used for the fit.
 
     fitted_synchronisation : np.ndarray
-        Best-fit exponential evaluated on ``accumulated_load_fit``.
+        Best-fit exponential evaluated on ``cumulative_load_fit``.
 
     popt : np.ndarray
         Optimal fit parameters ``(A, tau, C)``.
@@ -268,7 +268,7 @@ def fit_exponential(mean_synchronisation, accumulated_load):
     # Ignore the initial transient increase in synchronisation and fit
     # only the subsequent desynchronisation regime.
     peak = np.argmax(mean_synchronisation)
-    accumulated_load = accumulated_load[peak:]
+    cumulative_load = cumulative_load[peak:]
     mean_synchronisation_fit = mean_synchronisation[peak:]
 
     # INITIAL PARAMETER ESTIMATES
@@ -279,13 +279,13 @@ def fit_exponential(mean_synchronisation, accumulated_load):
     # Estimate tau as the load where the decay reaches 1/e of its initial amplitude. 
     target = C0 + A0/np.e
     idx = np.argmin(np.abs(mean_synchronisation_fit - target))
-    tau0 = accumulated_load[idx]
+    tau0 = cumulative_load[idx]
 
     # FIT EXPONENTIAL
 
     popt, pcov = curve_fit(
         exponential, 
-        accumulated_load, 
+        cumulative_load, 
         mean_synchronisation_fit, 
         p0=[A0, tau0, C0]
     )
@@ -295,6 +295,6 @@ def fit_exponential(mean_synchronisation, accumulated_load):
     
     print(f'τ = {tau:.3f} +/- {tau_err:.3f}')
 
-    fitted_synchronisation = exponential(accumulated_load, A, tau, C)
+    fitted_synchronisation = exponential(cumulative_load, A, tau, C)
 
-    return accumulated_load, fitted_synchronisation, popt, tau_err
+    return cumulative_load, fitted_synchronisation, popt, tau_err

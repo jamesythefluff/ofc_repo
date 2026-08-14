@@ -39,14 +39,16 @@ from analysis import (
 #------------------------------------------------
 # FINISH PLOT FUNCTION
 #------------------------------------------------
-def finish_plot(title, xlabel, ylabel, filename=None):
+def finish_plot(title, xlabel, ylabel, filepath = None):
     plt.title(title)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.grid(True, which="both", alpha=0.3)
 
-    if filename is not None:
-        plt.savefig(filename, dpi=300)
+    if filepath is not None:
+        plt.savefig(filepath, dpi=300)
+    else: 
+        print("SaveFig Error: No filepath specified.")
 
     plt.show(block=True)
 
@@ -273,7 +275,7 @@ def plot_average_synchronisation(domains, params):
 
     params : Parameters
         Simulation parameters used to determine the interpolation
-        settings and energy-transfer parameter alpha.
+        settings, sweep type, and sweep value.
     """
     # AVERAGE SYNCHRONISATION OVER DOMAINS
 
@@ -281,7 +283,7 @@ def plot_average_synchronisation(domains, params):
 
     # FIT EXPONENTIAL
 
-    load_fit, fitted_synchronisation, popt, tau_err = fit_exponential(mean_synchronisation, cumulative_load)
+    load_fit, fitted_synchronisation, popt, tau_err = fit_exponential(cumulative_load, mean_synchronisation)
     tau = popt[1]
 
     # PLOT DATA AND FIT
@@ -291,8 +293,10 @@ def plot_average_synchronisation(domains, params):
     plt.plot(load_fit, fitted_synchronisation, label = f'Exponential fit τ = {tau:.3f} +/- {tau_err:.3f}')
     plt.legend()
 
+    sweep_type = params.sweep_type
+
     finish_plot(
-            f"Average synchronisation vs cumulative load, α = {params.alpha:.3f}",
+            f"Average synchronisation vs cumulative load, {sweep_type} = {getattr(params, sweep_type):.3f}",
             "Cumulative load",
             f"Synchronisation order parameter R, averaged over {len(domains)} domains",
             )
@@ -300,18 +304,15 @@ def plot_average_synchronisation(domains, params):
 # -------------------------------------------------
 # PLOT DESYNCHRONISATION LOAD
 # -------------------------------------------------
-def plot_desynchronisation_load(alphas, taus, tau_errs, params):
+def plot_desynchronisation_load(taus, tau_errs, params):
     """
     Plots the characteristic desynchronisation load as a function
-    of the energy-transfer parameter alpha.
+    of the sweep parameter.
 
     Parameters
     ----------
-    alphas : array-like
-        Values of the energy-transfer parameter alpha.
-
     taus : array-like
-        Mean fitted desynchronisation loads for each alpha.
+        Mean fitted desynchronisation loads for each sweep value.
 
     tau_errs : array-like
         Uncertainties in the mean desynchronisation loads.
@@ -319,17 +320,27 @@ def plot_desynchronisation_load(alphas, taus, tau_errs, params):
     params : Parameters
         Simulation parameters.
     """
+    sweep_type = params.sweep_type
+    sweep_values = params.sweep_values
+
     # PLOT DATA WITH ERROR BARS
 
     plt.figure()
-    plt.errorbar(alphas, taus, yerr = tau_errs, fmt = '.', label = 'Data')
+    plt.errorbar(sweep_values, taus, yerr = tau_errs, fmt = '.', label = 'Data')
     plt.legend()
 
-    filename = f"tau_vs_alpha_{params.alpha_min}_{params.alpha_max}_{params.num_alphas}_{params.runs_per_alpha}.png"
+    directory = f"plots/{sweep_type}_sweep"
+    filename = (f"tau_vs_{sweep_type}_"
+                f"{np.min(sweep_values)}_"
+                f"{np.max(sweep_values)}_"
+                f"{len(sweep_values)}_"
+                f"{getattr(params, f'runs_per_{sweep_type}')}.png"
+    )
+    filepath = f"{directory}/{filename}"
 
     finish_plot(
-            f"Characteristic desynchronisation load τ vs energy transfer constant α",
-            "Energy transfer constant α",
+            f"Characteristic desynchronisation load τ vs {sweep_type}",
+            f"{sweep_type}",
             f"Characteristic desynchronisation load τ",
-            filename
+            filepath
             )
